@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import supabase from "../utils/supabase";
 import React from "react";
+import { Button } from "@/components/ui/button";
 
 export function HomePage() {
   const [displayData, setDisplayData] = useState([]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability
     fetchData();
   }, []);
 
   async function fetchData() {
     try {
-      const { data, error } = await supabase.from("equipment").select(
+      const { data } = await supabase.from("equipment").select(
         `
           name,
           category,
@@ -35,6 +37,7 @@ export function HomePage() {
 
   return (
     <div>
+      <Button>Click me</Button>
       <table>
         <thead>
           <tr>
