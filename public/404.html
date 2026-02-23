@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Preserve the path for React Router when GitHub Pages 404s on deep links
+      const path = window.location.pathname.replace('/Sandbox-app', '');
+      sessionStorage.setItem('redirect', path + window.location.search);
+      window.location.replace('/Sandbox-app/');
+    </script>
+  </head>
+  <body></body>
+</html>
