@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ import {
   Plus,
   Package,
   Building2,
+  Pencil,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -54,8 +56,10 @@ export function PropertyDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showUnitDialog, setShowUnitDialog] = useState(false);
-  const [newUnitNumber, setNewUnitNumber] = useState("");
-  const [newUnitDescription, setNewUnitDescription] = useState("");
+  const [editingUnit, setEditingUnit] = useState(null);
+  const [unitFormNumber, setUnitFormNumber] = useState("");
+  const [unitFormDescription, setUnitFormDescription] = useState("");
+  const [unitFormNotes, setUnitFormNotes] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -101,21 +105,47 @@ export function PropertyDetailPage() {
     }
   };
 
-  const handleAddUnit = async () => {
-    if (!newUnitNumber.trim()) return;
+  const openAddUnitDialog = () => {
+    setEditingUnit(null);
+    setUnitFormNumber("");
+    setUnitFormDescription("");
+    setUnitFormNotes("");
+    setShowUnitDialog(true);
+  };
+
+  const openEditUnitDialog = (unit) => {
+    setEditingUnit(unit);
+    setUnitFormNumber(unit.unit_number);
+    setUnitFormDescription(unit.description || "");
+    setUnitFormNotes(unit.notes || "");
+    setShowUnitDialog(true);
+  };
+
+  const handleSaveUnit = async () => {
+    if (!unitFormNumber.trim()) return;
     try {
-      await supabase.from("units").insert({
-        property_id: id,
-        user_id: user.id,
-        unit_number: newUnitNumber.trim(),
-        description: newUnitDescription.trim() || null,
-      });
-      setNewUnitNumber("");
-      setNewUnitDescription("");
+      if (editingUnit) {
+        await supabase
+          .from("units")
+          .update({
+            unit_number: unitFormNumber.trim(),
+            description: unitFormDescription.trim() || null,
+            notes: unitFormNotes.trim() || null,
+          })
+          .eq("id", editingUnit.id);
+      } else {
+        await supabase.from("units").insert({
+          property_id: id,
+          user_id: user.id,
+          unit_number: unitFormNumber.trim(),
+          description: unitFormDescription.trim() || null,
+          notes: unitFormNotes.trim() || null,
+        });
+      }
       setShowUnitDialog(false);
       fetchData();
     } catch (err) {
-      console.error("Error adding unit:", err);
+      console.error("Error saving unit:", err);
     }
   };
 
@@ -234,7 +264,7 @@ export function PropertyDetailPage() {
                   Manage units for this property
                 </CardDescription>
               </div>
-              <Button size="sm" onClick={() => setShowUnitDialog(true)}>
+              <Button size="sm" onClick={openAddUnitDialog}>
                 <Plus className="mr-1 size-4" />
                 Add Unit
               </Button>
@@ -252,7 +282,8 @@ export function PropertyDetailPage() {
                       <TableRow>
                         <TableHead>Unit Number</TableHead>
                         <TableHead>Description</TableHead>
-                        <TableHead className="w-16"></TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead className="w-20"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -264,14 +295,26 @@ export function PropertyDetailPage() {
                           <TableCell className="text-muted-foreground">
                             {unit.description || "—"}
                           </TableCell>
+                          <TableCell className="text-muted-foreground max-w-48 truncate">
+                            {unit.notes || "—"}
+                          </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={() => handleDeleteUnit(unit.id)}
-                            >
-                              <Trash2 className="size-3" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                onClick={() => openEditUnitDialog(unit)}
+                              >
+                                <Pencil className="size-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                onClick={() => handleDeleteUnit(unit.id)}
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -386,10 +429,13 @@ export function PropertyDetailPage() {
       <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Unit</DialogTitle>
+            <DialogTitle>
+              {editingUnit ? "Edit Unit" : "Add Unit"}
+            </DialogTitle>
             <DialogDescription>
-              Add a unit to this property (e.g., &quot;1A&quot;, &quot;Apt
-              201&quot;, &quot;Unit B&quot;)
+              {editingUnit
+                ? "Update the unit details below."
+                : 'Add a unit to this property (e.g., "1A", "Apt 201", "Unit B")'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -398,8 +444,8 @@ export function PropertyDetailPage() {
               <Input
                 id="unitNumber"
                 placeholder="e.g., 1A"
-                value={newUnitNumber}
-                onChange={(e) => setNewUnitNumber(e.target.value)}
+                value={unitFormNumber}
+                onChange={(e) => setUnitFormNumber(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -409,9 +455,20 @@ export function PropertyDetailPage() {
               <Input
                 id="unitDescription"
                 placeholder="e.g., 2BR/1BA ground floor"
-                value={newUnitDescription}
-                onChange={(e) => setNewUnitDescription(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddUnit()}
+                value={unitFormDescription}
+                onChange={(e) => setUnitFormDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unitNotes">
+                Notes <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="unitNotes"
+                placeholder="Any additional notes about this unit..."
+                value={unitFormNotes}
+                onChange={(e) => setUnitFormNotes(e.target.value)}
+                rows={2}
               />
             </div>
           </div>
@@ -422,7 +479,9 @@ export function PropertyDetailPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleAddUnit}>Add Unit</Button>
+            <Button onClick={handleSaveUnit}>
+              {editingUnit ? "Save Changes" : "Add Unit"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
