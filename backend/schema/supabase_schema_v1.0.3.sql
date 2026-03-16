@@ -5,7 +5,7 @@
 -- foreign keys, indexes, and Row Level Security (RLS) policies
 -- =====================================================
 --
--- VERSION: 1.0.3
+-- VERSION: 1.1.0
 -- DATE:    2026-02-17
 --
 -- VERSIONING SYSTEM:
@@ -16,6 +16,10 @@
 --
 -- CHANGELOG:
 -- ─────────────────────────────────────────────────────
+-- v1.1.0  (2026-02-17)  Replace tenant_occupied with description on units
+--   - BREAKING: Removed tenant_occupied BOOLEAN column from units table
+--   - Added description TEXT column to units table (optional)
+--
 -- v1.0.3  (2026-02-17)  Documentation update
 --   - Added commented DROP block back to full schema for from-scratch rebuilds
 --   - Created migration file structure (migration_vX.X.X.sql)
@@ -173,7 +177,7 @@ CREATE TABLE units (
   property_id UUID REFERENCES properties(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   unit_number TEXT NOT NULL, -- "1A", "Apt 201", "Unit B", etc.
-  tenant_occupied BOOLEAN DEFAULT FALSE,
+  description TEXT, -- optional description e.g. "2BR/1BA ground floor"
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

@@ -55,6 +55,7 @@ export function PropertyDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showUnitDialog, setShowUnitDialog] = useState(false);
   const [newUnitNumber, setNewUnitNumber] = useState("");
+  const [newUnitDescription, setNewUnitDescription] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -107,8 +108,10 @@ export function PropertyDetailPage() {
         property_id: id,
         user_id: user.id,
         unit_number: newUnitNumber.trim(),
+        description: newUnitDescription.trim() || null,
       });
       setNewUnitNumber("");
+      setNewUnitDescription("");
       setShowUnitDialog(false);
       fetchData();
     } catch (err) {
@@ -248,7 +251,7 @@ export function PropertyDetailPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Unit Number</TableHead>
-                        <TableHead>Occupied</TableHead>
+                        <TableHead>Description</TableHead>
                         <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -258,16 +261,8 @@ export function PropertyDetailPage() {
                           <TableCell className="font-medium">
                             {unit.unit_number}
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                unit.tenant_occupied
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {unit.tenant_occupied ? "Occupied" : "Vacant"}
-                            </Badge>
+                          <TableCell className="text-muted-foreground">
+                            {unit.description || "—"}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -397,15 +392,28 @@ export function PropertyDetailPage() {
               201&quot;, &quot;Unit B&quot;)
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="unitNumber">Unit Number</Label>
-            <Input
-              id="unitNumber"
-              placeholder="e.g., 1A"
-              value={newUnitNumber}
-              onChange={(e) => setNewUnitNumber(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddUnit()}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="unitNumber">Unit Number</Label>
+              <Input
+                id="unitNumber"
+                placeholder="e.g., 1A"
+                value={newUnitNumber}
+                onChange={(e) => setNewUnitNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unitDescription">
+                Description <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+              </Label>
+              <Input
+                id="unitDescription"
+                placeholder="e.g., 2BR/1BA ground floor"
+                value={newUnitDescription}
+                onChange={(e) => setNewUnitDescription(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddUnit()}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
