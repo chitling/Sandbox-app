@@ -149,7 +149,7 @@ export function AssetDetailPage() {
             <p className="text-muted-foreground">
               {asset.properties?.address}
               {asset.units?.unit_number
-                ? ` - ${asset.units.unit_number}`
+                ? ` - Unit ${asset.units.unit_number}`
                 : ""}
               {asset.location && asset.location !== "Not specified"
                 ? ` / ${asset.location}`
@@ -240,6 +240,14 @@ export function AssetDetailPage() {
           <CardContent>
             <dl className="space-y-3">
               {[
+                ["Property", asset.properties?.address],
+                ["Unit", asset.units?.unit_number],
+                [
+                  "Location",
+                  asset.location && asset.location !== "Not specified"
+                    ? asset.location
+                    : null,
+                ],
                 ["Manufacturer", asset.manufacturer],
                 ["Model", asset.model_number],
                 ["Serial Number", asset.serial_number],
