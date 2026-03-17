@@ -5,3 +5,4 @@
 Next:
 - Maintenance tasks should move to service history after completion.
 - Add option to make maintenance tasks re-occuring.
+- In all forms, have option to create new from drop down boxes

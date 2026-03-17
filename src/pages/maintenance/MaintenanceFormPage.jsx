@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Repeat, CalendarClock } from "lucide-react";
+
+const frequencies = [
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly (every 3 months)" },
+  { value: "semi-annual", label: "Semi-Annual (every 6 months)" },
+  { value: "annual", label: "Annual (every 12 months)" },
+  { value: "custom", label: "Custom interval" },
+];
 
 export function MaintenanceFormPage() {
   const { id } = useParams();
@@ -51,6 +60,10 @@ export function MaintenanceFormPage() {
     next_due_date: "",
     estimated_duration_minutes: "",
     estimated_cost: "",
+    is_recurring: false,
+    frequency: "",
+    custom_interval_days: "",
+    recurrence_mode: "fixed",
   });
 
   useEffect(() => {
@@ -100,6 +113,10 @@ export function MaintenanceFormPage() {
         next_due_date: data.next_due_date || "",
         estimated_duration_minutes: data.estimated_duration_minutes || "",
         estimated_cost: data.estimated_cost || "",
+        is_recurring: data.is_recurring || false,
+        frequency: data.frequency || "",
+        custom_interval_days: data.custom_interval_days || "",
+        recurrence_mode: data.recurrence_mode || "fixed",
       });
       setLinkType(data.asset_id ? "asset" : "property");
     } catch (err) {
@@ -111,7 +128,18 @@ export function MaintenanceFormPage() {
   }
 
   const handleChange = (field, value) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "is_recurring" && !value) {
+        next.frequency = "";
+        next.custom_interval_days = "";
+        next.recurrence_mode = "fixed";
+      }
+      if (field === "frequency" && value !== "custom") {
+        next.custom_interval_days = "";
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -136,6 +164,15 @@ export function MaintenanceFormPage() {
         estimated_cost: form.estimated_cost
           ? parseFloat(form.estimated_cost)
           : null,
+        is_recurring: form.is_recurring,
+        frequency: form.is_recurring ? form.frequency || null : null,
+        custom_interval_days:
+          form.is_recurring && form.frequency === "custom" && form.custom_interval_days
+            ? parseInt(form.custom_interval_days)
+            : null,
+        recurrence_mode: form.is_recurring
+          ? form.recurrence_mode
+          : "fixed",
         status: "pending",
       };
 
@@ -344,7 +381,8 @@ export function MaintenanceFormPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="next_due_date">
-                Due Date <span className="text-destructive">*</span>
+                {form.is_recurring ? "First Due Date" : "Due Date"}{" "}
+                <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="next_due_date"
@@ -392,6 +430,144 @@ export function MaintenanceFormPage() {
               </div>
             </div>
           </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recurrence</CardTitle>
+                <CardDescription>
+                  Make this a recurring maintenance task
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant={form.is_recurring ? "default" : "outline"}
+                size="sm"
+                onClick={() =>
+                  handleChange("is_recurring", !form.is_recurring)
+                }
+              >
+                <Repeat className="mr-1 size-4" />
+                {form.is_recurring ? "Recurring" : "One-time"}
+              </Button>
+            </div>
+          </CardHeader>
+          {form.is_recurring && (
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>
+                  Frequency <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={form.frequency}
+                  onValueChange={(v) => handleChange("frequency", v)}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {frequencies.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {form.frequency === "custom" && (
+                <div className="space-y-2">
+                  <Label htmlFor="custom_interval_days">
+                    Custom Interval (days){" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="custom_interval_days"
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 45"
+                    value={form.custom_interval_days}
+                    onChange={(e) =>
+                      handleChange(
+                        "custom_interval_days",
+                        e.target.value
+                      )
+                    }
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <Label>Scheduling Mode</Label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    className={`flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors ${
+                      form.recurrence_mode === "fixed"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "hover:bg-muted/50"
+                    }`}
+                    onClick={() =>
+                      handleChange("recurrence_mode", "fixed")
+                    }
+                  >
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="size-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        Fixed Schedule
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Next due date is always calculated from the original
+                      schedule, regardless of when completed.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors ${
+                      form.recurrence_mode === "from_completion"
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "hover:bg-muted/50"
+                    }`}
+                    onClick={() =>
+                      handleChange("recurrence_mode", "from_completion")
+                    }
+                  >
+                    <div className="flex items-center gap-2">
+                      <Repeat className="size-4 text-primary" />
+                      <span className="text-sm font-medium">
+                        From Completion
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Next due date is calculated from when the task was
+                      actually completed.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {form.frequency && form.next_due_date && (
+                <div className="rounded-md bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">Preview:</span> First due{" "}
+                    {new Date(form.next_due_date).toLocaleDateString()}, then
+                    repeating{" "}
+                    {form.frequency === "custom"
+                      ? `every ${form.custom_interval_days || "?"} days`
+                      : form.frequency}{" "}
+                    ({form.recurrence_mode === "fixed"
+                      ? "fixed schedule"
+                      : "from completion date"})
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
 
         <div className="flex justify-end gap-3">

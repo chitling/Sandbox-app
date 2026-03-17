@@ -5,7 +5,7 @@
 -- foreign keys, indexes, and Row Level Security (RLS) policies
 -- =====================================================
 --
--- VERSION: 1.1.0
+-- VERSION: 1.2.0
 -- DATE:    2026-02-17
 --
 -- VERSIONING SYSTEM:
@@ -16,6 +16,11 @@
 --
 -- CHANGELOG:
 -- ─────────────────────────────────────────────────────
+-- v1.2.0  (2026-02-17)  Recurring task recurrence mode
+--   - Added recurrence_mode TEXT column to maintenance_tasks table
+--   - Values: 'fixed' (schedule-based) or 'from_completion' (completion-based)
+--   - Added CHECK constraint valid_recurrence_mode
+--
 -- v1.1.0  (2026-02-17)  Replace tenant_occupied with description on units
 --   - BREAKING: Removed tenant_occupied BOOLEAN column from units table
 --   - Added description TEXT column to units table (optional)
@@ -889,6 +894,7 @@ CREATE TABLE maintenance_tasks (
   is_recurring BOOLEAN DEFAULT FALSE,
   frequency TEXT, -- 'monthly', 'quarterly', 'semi-annual', 'annual', 'custom'
   custom_interval_days INTEGER, -- For custom frequency
+  recurrence_mode TEXT DEFAULT 'fixed', -- 'fixed' = from schedule, 'from_completion' = from completion date
   
   -- Due date
   next_due_date DATE NOT NULL,
@@ -909,10 +915,13 @@ CREATE TABLE maintenance_tasks (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
-  -- Constraint: Must have either asset_id OR property_id
+  -- Constraints
   CONSTRAINT task_has_asset_or_property CHECK (
     (asset_id IS NOT NULL AND property_id IS NULL) OR
     (asset_id IS NULL AND property_id IS NOT NULL)
+  ),
+  CONSTRAINT valid_recurrence_mode CHECK (
+    recurrence_mode IN ('fixed', 'from_completion')
   )
 );
 

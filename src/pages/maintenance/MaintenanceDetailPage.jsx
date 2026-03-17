@@ -24,7 +24,39 @@ import {
   Edit,
   Trash2,
   CheckCircle2,
+  Repeat,
+  CalendarClock,
 } from "lucide-react";
+
+const frequencyLabels = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  "semi-annual": "Semi-Annual",
+  annual: "Annual",
+  custom: "Custom",
+};
+
+function computeNextDueDate(task, completionDate) {
+  const baseDate =
+    task.recurrence_mode === "from_completion"
+      ? new Date(completionDate)
+      : new Date(task.next_due_date);
+
+  if (task.frequency === "custom" && task.custom_interval_days) {
+    baseDate.setDate(baseDate.getDate() + task.custom_interval_days);
+  } else {
+    const monthsMap = {
+      monthly: 1,
+      quarterly: 3,
+      "semi-annual": 6,
+      annual: 12,
+    };
+    const months = monthsMap[task.frequency] || 1;
+    baseDate.setMonth(baseDate.getMonth() + months);
+  }
+
+  return baseDate.toISOString().split("T")[0];
+}
 
 export function MaintenanceDetailPage() {
   const { id } = useParams();
@@ -67,17 +99,33 @@ export function MaintenanceDetailPage() {
   };
 
   const handleComplete = async () => {
+    const today = new Date().toISOString().split("T")[0];
+
     try {
-      await supabase
-        .from("maintenance_tasks")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          last_completed_date: new Date().toISOString().split("T")[0],
-          completion_notes: completionNotes || null,
-        })
-        .eq("id", id);
+      if (task.is_recurring) {
+        const nextDue = computeNextDueDate(task, today);
+        await supabase
+          .from("maintenance_tasks")
+          .update({
+            last_completed_date: today,
+            completion_notes: completionNotes || null,
+            next_due_date: nextDue,
+            status: "pending",
+          })
+          .eq("id", id);
+      } else {
+        await supabase
+          .from("maintenance_tasks")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            last_completed_date: today,
+            completion_notes: completionNotes || null,
+          })
+          .eq("id", id);
+      }
       setShowCompleteDialog(false);
+      setCompletionNotes("");
       fetchTask();
     } catch (err) {
       console.error("Error:", err);
@@ -109,6 +157,10 @@ export function MaintenanceDetailPage() {
   const isOverdue = task.status === "pending" && task.next_due_date < today;
   const displayStatus = isOverdue ? "overdue" : task.status;
 
+  const nextDuePreview = task.is_recurring
+    ? computeNextDueDate(task, today)
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -136,6 +188,12 @@ export function MaintenanceDetailPage() {
               >
                 {displayStatus}
               </Badge>
+              {task.is_recurring && (
+                <Badge variant="outline" className="gap-1">
+                  <Repeat className="size-3" />
+                  {frequencyLabels[task.frequency] || task.frequency}
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground">
               Due {new Date(task.next_due_date).toLocaleDateString()}
@@ -267,6 +325,59 @@ export function MaintenanceDetailPage() {
         </Card>
 
         <div className="space-y-6">
+          {task.is_recurring && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Repeat className="size-4" />
+                  Recurrence Schedule
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-3">
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-muted-foreground">
+                      Frequency
+                    </dt>
+                    <dd className="text-sm font-medium">
+                      {task.frequency === "custom"
+                        ? `Every ${task.custom_interval_days} days`
+                        : frequencyLabels[task.frequency] || task.frequency}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-muted-foreground">
+                      Scheduling Mode
+                    </dt>
+                    <dd className="flex items-center gap-1.5 text-sm font-medium">
+                      {task.recurrence_mode === "fixed" ? (
+                        <>
+                          <CalendarClock className="size-3.5 text-muted-foreground" />
+                          Fixed Schedule
+                        </>
+                      ) : (
+                        <>
+                          <Repeat className="size-3.5 text-muted-foreground" />
+                          From Completion
+                        </>
+                      )}
+                    </dd>
+                  </div>
+                  {nextDuePreview && task.status !== "completed" && (
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-muted-foreground">
+                        Next Due After Completion
+                      </dt>
+                      <dd className="text-sm font-medium">
+                        {new Date(nextDuePreview).toLocaleDateString()}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </CardContent>
+            </Card>
+          )}
+
           {task.description && (
             <Card>
               <CardHeader>
@@ -297,7 +408,11 @@ export function MaintenanceDetailPage() {
       {task.completion_notes && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Completion Notes</CardTitle>
+            <CardTitle className="text-base">
+              {task.is_recurring
+                ? "Last Completion Notes"
+                : "Completion Notes"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-sm">
@@ -315,8 +430,23 @@ export function MaintenanceDetailPage() {
           <DialogHeader>
             <DialogTitle>Complete Task</DialogTitle>
             <DialogDescription>
-              Mark this task as complete. You can optionally add notes
-              about what was done.
+              {task.is_recurring ? (
+                <>
+                  Mark this task as complete. Since this is a recurring task
+                  ({frequencyLabels[task.frequency] || task.frequency}), the
+                  next due date will be automatically set to{" "}
+                  <strong>
+                    {nextDuePreview
+                      ? new Date(nextDuePreview).toLocaleDateString()
+                      : ""}
+                  </strong>
+                  {task.recurrence_mode === "fixed"
+                    ? " (based on the current schedule)."
+                    : " (based on today's completion date)."}
+                </>
+              ) : (
+                "Mark this task as complete. You can optionally add notes about what was done."
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -338,7 +468,7 @@ export function MaintenanceDetailPage() {
             </Button>
             <Button onClick={handleComplete}>
               <CheckCircle2 className="mr-1 size-4" />
-              Complete
+              {task.is_recurring ? "Complete & Reschedule" : "Complete"}
             </Button>
           </DialogFooter>
         </DialogContent>

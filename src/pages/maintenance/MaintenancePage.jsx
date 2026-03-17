@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, CalendarClock, CheckCircle2 } from "lucide-react";
+import { Plus, Search, CalendarClock, CheckCircle2, Repeat } from "lucide-react";
 
 export function MaintenancePage() {
   const navigate = useNavigate();
@@ -63,17 +63,47 @@ export function MaintenancePage() {
     }
   }
 
-  const handleComplete = async (e, taskId) => {
+  const handleComplete = async (e, task) => {
     e.stopPropagation();
+    const today = new Date().toISOString().split("T")[0];
+
     try {
-      await supabase
-        .from("maintenance_tasks")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          last_completed_date: new Date().toISOString().split("T")[0],
-        })
-        .eq("id", taskId);
+      if (task.is_recurring) {
+        const baseDate =
+          task.recurrence_mode === "from_completion"
+            ? new Date(today)
+            : new Date(task.next_due_date);
+
+        if (task.frequency === "custom" && task.custom_interval_days) {
+          baseDate.setDate(baseDate.getDate() + task.custom_interval_days);
+        } else {
+          const monthsMap = {
+            monthly: 1,
+            quarterly: 3,
+            "semi-annual": 6,
+            annual: 12,
+          };
+          baseDate.setMonth(baseDate.getMonth() + (monthsMap[task.frequency] || 1));
+        }
+
+        await supabase
+          .from("maintenance_tasks")
+          .update({
+            last_completed_date: today,
+            next_due_date: baseDate.toISOString().split("T")[0],
+            status: "pending",
+          })
+          .eq("id", task.id);
+      } else {
+        await supabase
+          .from("maintenance_tasks")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            last_completed_date: today,
+          })
+          .eq("id", task.id);
+      }
       fetchTasks();
     } catch (err) {
       console.error("Error:", err);
@@ -182,12 +212,17 @@ export function MaintenancePage() {
                       onClick={() => navigate(`/maintenance/${task.id}`)}
                     >
                       <TableCell>
-                        <p className="font-medium">{task.task_name}</p>
-                        {task.is_recurring && (
-                          <p className="text-xs text-muted-foreground">
-                            Recurring ({task.frequency})
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{task.task_name}</p>
+                          {task.is_recurring && (
+                            <Badge variant="outline" className="gap-1 text-xs">
+                              <Repeat className="size-3" />
+                              {task.frequency === "custom"
+                                ? `${task.custom_interval_days}d`
+                                : task.frequency}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <p className="text-sm">
@@ -222,8 +257,8 @@ export function MaintenancePage() {
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            title="Mark complete"
-                            onClick={(e) => handleComplete(e, task.id)}
+                            title={task.is_recurring ? "Complete & reschedule" : "Mark complete"}
+                            onClick={(e) => handleComplete(e, task)}
                           >
                             <CheckCircle2 className="size-4 text-green-600" />
                           </Button>
