@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, CalendarClock } from "lucide-react";
 
 const serviceTypes = [
   "Preventative Maintenance",
@@ -40,15 +41,22 @@ export function ServiceRecordFormPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [error, setError] = useState("");
+  const [linkType, setLinkType] = useState(
+    preselectedAssetId ? "asset" : "asset"
+  );
 
   const [assets, setAssets] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [contractors, setContractors] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [linkedTask, setLinkedTask] = useState(null);
 
   const [form, setForm] = useState({
     asset_id: preselectedAssetId || "",
+    property_id: "",
     contractor_id: "",
     vendor_id: "",
+    maintenance_task_id: "",
     service_date: new Date().toISOString().split("T")[0],
     service_type: "",
     description: "",
@@ -66,13 +74,18 @@ export function ServiceRecordFormPage() {
   }, [id]);
 
   async function fetchLookups() {
-    const [{ data: assetsData }, { data: contData }, { data: vendData }] =
+    const [{ data: assetsData }, { data: propsData }, { data: contData }, { data: vendData }] =
       await Promise.all([
         supabase
           .from("assets")
           .select("id, custom_name, properties(address), asset_category_l3(name)")
           .eq("is_archived", false)
           .order("custom_name"),
+        supabase
+          .from("properties")
+          .select("id, address")
+          .eq("is_archived", false)
+          .order("address"),
         supabase
           .from("contractors")
           .select("id, company_name")
@@ -83,6 +96,7 @@ export function ServiceRecordFormPage() {
           .order("company_name"),
       ]);
     setAssets(assetsData || []);
+    setProperties(propsData || []);
     setContractors(contData || []);
     setVendors(vendData || []);
   }
@@ -91,15 +105,25 @@ export function ServiceRecordFormPage() {
     try {
       const { data, error } = await supabase
         .from("service_records")
-        .select("*")
+        .select("*, maintenance_tasks(task_name)")
         .eq("id", id)
         .single();
 
       if (error) throw error;
+
+      const hasAsset = Boolean(data.asset_id);
+      setLinkType(hasAsset ? "asset" : "property");
+
+      if (data.maintenance_tasks) {
+        setLinkedTask(data.maintenance_tasks);
+      }
+
       setForm({
         asset_id: data.asset_id || "",
+        property_id: data.property_id || "",
         contractor_id: data.contractor_id || "",
         vendor_id: data.vendor_id || "",
+        maintenance_task_id: data.maintenance_task_id || "",
         service_date: data.service_date || "",
         service_type: data.service_type || "",
         description: data.description || "",
@@ -138,9 +162,11 @@ export function ServiceRecordFormPage() {
     try {
       const payload = {
         user_id: user.id,
-        asset_id: form.asset_id || null,
+        asset_id: linkType === "asset" ? form.asset_id || null : null,
+        property_id: linkType === "property" ? form.property_id || null : null,
         contractor_id: form.contractor_id || null,
         vendor_id: form.vendor_id || null,
+        maintenance_task_id: form.maintenance_task_id || null,
         service_date: form.service_date,
         service_type: form.service_type,
         description: form.description,
@@ -205,37 +231,93 @@ export function ServiceRecordFormPage() {
           </div>
         )}
 
+        {linkedTask && (
+          <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950">
+            <CalendarClock className="size-4 text-blue-600" />
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Created from maintenance task:{" "}
+              <span className="font-medium">{linkedTask.task_name}</span>
+            </p>
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Service Details</CardTitle>
             <CardDescription>What work was performed?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>
-                  Asset <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={form.asset_id}
-                  onValueChange={(v) => handleChange("asset_id", v)}
-                  required
+            <div className="space-y-2">
+              <Label>Link to</Label>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant={linkType === "asset" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setLinkType("asset")}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select asset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assets.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.custom_name ||
-                          a.asset_category_l3?.name ||
-                          "Unnamed"}{" "}
-                        - {a.properties?.address || ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  Asset
+                </Button>
+                <Button
+                  type="button"
+                  variant={linkType === "property" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setLinkType("property")}
+                >
+                  Property
+                </Button>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {linkType === "asset" ? (
+                <div className="space-y-2">
+                  <Label>
+                    Asset <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={form.asset_id}
+                    onValueChange={(v) => handleChange("asset_id", v)}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select asset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assets.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.custom_name ||
+                            a.asset_category_l3?.name ||
+                            "Unnamed"}{" "}
+                          - {a.properties?.address || ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>
+                    Property <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={form.property_id}
+                    onValueChange={(v) => handleChange("property_id", v)}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {properties.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.address}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>
                   Service Type <span className="text-destructive">*</span>

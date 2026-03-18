@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import supabase from "@/utils/supabase";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -17,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, CalendarClock } from "lucide-react";
 
 export function ServiceRecordDetailPage() {
   const { id } = useParams();
@@ -35,7 +36,7 @@ export function ServiceRecordDetailPage() {
       const { data } = await supabase
         .from("service_records")
         .select(
-          "*, assets(custom_name, properties(address), asset_category_l1(name), asset_category_l3(name)), contractors(company_name, phone, email), vendors(company_name)"
+          "*, assets(custom_name, properties(address), asset_category_l1(name), asset_category_l3(name)), properties(address), contractors(company_name, phone, email), vendors(company_name), maintenance_tasks(id, task_name)"
         )
         .eq("id", id)
         .single();
@@ -78,6 +79,9 @@ export function ServiceRecordDetailPage() {
     );
   }
 
+  const propertyAddress =
+    record.assets?.properties?.address || record.properties?.address || "Unknown";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -94,7 +98,7 @@ export function ServiceRecordDetailPage() {
               Service Record
             </h1>
             <p className="text-muted-foreground">
-              {new Date(record.service_date).toLocaleDateString()} &middot;{" "}
+              {formatDate(record.service_date)} &middot;{" "}
               {record.service_type}
             </p>
           </div>
@@ -119,6 +123,23 @@ export function ServiceRecordDetailPage() {
           </Button>
         </div>
       </div>
+
+      {record.maintenance_tasks && (
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950">
+          <CalendarClock className="size-4 text-blue-600" />
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Created from maintenance task:{" "}
+            <span
+              className="cursor-pointer font-medium underline"
+              onClick={() =>
+                navigate(`/maintenance/${record.maintenance_tasks.id}`)
+              }
+            >
+              {record.maintenance_tasks.task_name}
+            </span>
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -169,25 +190,25 @@ export function ServiceRecordDetailPage() {
               <div className="flex justify-between">
                 <dt className="text-sm text-muted-foreground">Date</dt>
                 <dd className="text-sm font-medium">
-                  {new Date(record.service_date).toLocaleDateString()}
+                  {formatDate(record.service_date)}
                 </dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-sm text-muted-foreground">Asset</dt>
-                <dd
-                  className="cursor-pointer text-sm font-medium text-primary hover:underline"
-                  onClick={() => navigate(`/assets/${record.asset_id}`)}
-                >
-                  {record.assets?.custom_name ||
-                    record.assets?.asset_category_l3?.name ||
-                    "Unknown"}
-                </dd>
-              </div>
+              {record.assets && (
+                <div className="flex justify-between">
+                  <dt className="text-sm text-muted-foreground">Asset</dt>
+                  <dd
+                    className="cursor-pointer text-sm font-medium text-primary hover:underline"
+                    onClick={() => navigate(`/assets/${record.asset_id}`)}
+                  >
+                    {record.assets.custom_name ||
+                      record.assets.asset_category_l3?.name ||
+                      "Unknown"}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-sm text-muted-foreground">Property</dt>
-                <dd className="text-sm font-medium">
-                  {record.assets?.properties?.address || "Unknown"}
-                </dd>
+                <dd className="text-sm font-medium">{propertyAddress}</dd>
               </div>
               {record.is_warranty_work && (
                 <div className="flex justify-between">

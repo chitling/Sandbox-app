@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import supabase from "@/utils/supabase";
+import { formatDate } from "@/utils/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +46,7 @@ export function ServiceRecordsPage() {
       const { data, error } = await supabase
         .from("service_records")
         .select(
-          "*, assets(custom_name, property_id, properties(address), asset_category_l1(name)), contractors(company_name)"
+          "*, assets(custom_name, property_id, properties(address), asset_category_l1(name)), properties(address), contractors(company_name), maintenance_tasks(task_name)"
         )
         .order("service_date", { ascending: false });
 
@@ -59,14 +60,17 @@ export function ServiceRecordsPage() {
   }
 
   const filtered = records.filter((r) => {
+    const propertyAddr =
+      r.assets?.properties?.address || r.properties?.address || "";
     const matchesSearch =
       !search ||
       r.description?.toLowerCase().includes(search.toLowerCase()) ||
       r.assets?.custom_name?.toLowerCase().includes(search.toLowerCase()) ||
-      r.assets?.properties?.address
+      propertyAddr.toLowerCase().includes(search.toLowerCase()) ||
+      r.contractors?.company_name
         ?.toLowerCase()
         .includes(search.toLowerCase()) ||
-      r.contractors?.company_name
+      r.maintenance_tasks?.task_name
         ?.toLowerCase()
         .includes(search.toLowerCase());
     const matchesType =
@@ -147,7 +151,7 @@ export function ServiceRecordsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Asset</TableHead>
+                    <TableHead>Asset / Property</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Contractor</TableHead>
@@ -164,15 +168,21 @@ export function ServiceRecordsPage() {
                       }
                     >
                       <TableCell className="whitespace-nowrap">
-                        {new Date(record.service_date).toLocaleDateString()}
+                        {formatDate(record.service_date)}
                       </TableCell>
                       <TableCell>
                         <div>
                           <p className="text-sm font-medium">
-                            {record.assets?.custom_name || "Unknown"}
+                            {record.assets?.custom_name ||
+                              record.properties?.address ||
+                              "Unknown"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {record.assets?.properties?.address || ""}
+                            {record.assets
+                              ? record.assets.properties?.address || ""
+                              : record.maintenance_tasks
+                                ? `Task: ${record.maintenance_tasks.task_name}`
+                                : ""}
                           </p>
                         </div>
                       </TableCell>

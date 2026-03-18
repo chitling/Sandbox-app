@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import supabase from "@/utils/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -244,9 +245,7 @@ export function DashboardPage() {
                       >
                         {isOverdue
                           ? "Overdue"
-                          : new Date(
-                              task.next_due_date
-                            ).toLocaleDateString()}
+                          : formatDate(task.next_due_date)}
                       </Badge>
                     </div>
                   );
@@ -305,7 +304,7 @@ export function DashboardPage() {
                           : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(record.service_date).toLocaleDateString()}
+                        {formatDate(record.service_date)}
                       </p>
                     </div>
                   </div>

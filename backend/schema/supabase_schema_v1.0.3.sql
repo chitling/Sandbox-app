@@ -5,7 +5,7 @@
 -- foreign keys, indexes, and Row Level Security (RLS) policies
 -- =====================================================
 --
--- VERSION: 1.2.0
+-- VERSION: 1.3.0
 -- DATE:    2026-02-17
 --
 -- VERSIONING SYSTEM:
@@ -16,6 +16,13 @@
 --
 -- CHANGELOG:
 -- ─────────────────────────────────────────────────────
+-- v1.3.0  (2026-02-17)  Link service records to maintenance tasks
+--   - Made asset_id nullable on service_records (property-level tasks)
+--   - Added property_id UUID FK to service_records
+--   - Added maintenance_task_id UUID FK to service_records
+--   - Added CHECK constraint service_has_asset_or_property
+--   - Updated service_history_detail view with new columns
+--
 -- v1.2.0  (2026-02-17)  Recurring task recurrence mode
 --   - Added recurrence_mode TEXT column to maintenance_tasks table
 --   - Values: 'fixed' (schedule-based) or 'from_completion' (completion-based)
@@ -821,37 +828,45 @@ CREATE POLICY "Users can delete own assets"
 CREATE TABLE service_records (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  asset_id UUID REFERENCES assets(id) ON DELETE CASCADE NOT NULL,
-  contractor_id UUID REFERENCES contractors(id) ON DELETE SET NULL, -- Who performed the service
-  vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL, -- Where parts were purchased (if applicable)
-  
+  asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
+  property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
+  contractor_id UUID REFERENCES contractors(id) ON DELETE SET NULL,
+  vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL,
+  maintenance_task_id UUID REFERENCES maintenance_tasks(id) ON DELETE SET NULL,
+
   -- Service details
   service_date DATE NOT NULL,
   service_type TEXT NOT NULL, -- 'Preventative Maintenance', 'Repair', 'Replacement', 'Inspection'
   description TEXT NOT NULL,
-  
+
   -- Cost breakdown
   labor_cost DECIMAL(10, 2),
   parts_cost DECIMAL(10, 2),
-  total_cost DECIMAL(10, 2), -- Can be auto-calculated or manually entered
-  
+  total_cost DECIMAL(10, 2),
+
   -- Warranty
   is_warranty_work BOOLEAN DEFAULT FALSE,
-  repair_warranty_expiration DATE, -- Warranty on this specific repair
-  
+  repair_warranty_expiration DATE,
+
   -- Documents
-  receipt_urls TEXT[], -- Array of receipt/invoice URLs from Supabase Storage
-  
+  receipt_urls TEXT[],
+
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT service_has_asset_or_property CHECK (
+    asset_id IS NOT NULL OR property_id IS NOT NULL
+  )
 );
 
 -- Indexes
 CREATE INDEX idx_service_records_user_id ON service_records(user_id);
 CREATE INDEX idx_service_records_asset_id ON service_records(asset_id);
+CREATE INDEX idx_service_records_property_id ON service_records(property_id);
 CREATE INDEX idx_service_records_contractor_id ON service_records(contractor_id);
 CREATE INDEX idx_service_records_vendor_id ON service_records(vendor_id);
+CREATE INDEX idx_service_records_maintenance_task_id ON service_records(maintenance_task_id);
 CREATE INDEX idx_service_records_date ON service_records(service_date);
 CREATE INDEX idx_service_records_type ON service_records(service_type);
 
@@ -1164,19 +1179,22 @@ SELECT
   l2.name AS category_l2_name,
   l3.name AS category_l3_name,
   a.custom_name AS asset_name,
-  p.address AS property_address,
+  COALESCE(p_asset.address, p_direct.address) AS property_address,
   c.company_name AS contractor_name,
   c.contact_name AS contractor_contact,
   v.company_name AS vendor_name,
-  v.contact_name AS vendor_contact
+  v.contact_name AS vendor_contact,
+  mt.task_name AS maintenance_task_name
 FROM service_records sr
 LEFT JOIN assets a ON sr.asset_id = a.id
 LEFT JOIN asset_category_l1 l1 ON a.category_l1_id = l1.id
 LEFT JOIN asset_category_l2 l2 ON a.category_l2_id = l2.id
 LEFT JOIN asset_category_l3 l3 ON a.category_l3_id = l3.id
-LEFT JOIN properties p ON a.property_id = p.id
+LEFT JOIN properties p_asset ON a.property_id = p_asset.id
+LEFT JOIN properties p_direct ON sr.property_id = p_direct.id
 LEFT JOIN contractors c ON sr.contractor_id = c.id
 LEFT JOIN vendors v ON sr.vendor_id = v.id
+LEFT JOIN maintenance_tasks mt ON sr.maintenance_task_id = mt.id
 ORDER BY sr.service_date DESC;
 
 -- =====================================================

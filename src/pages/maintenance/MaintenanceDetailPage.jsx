@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import supabase from "@/utils/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -26,6 +28,8 @@ import {
   CheckCircle2,
   Repeat,
   CalendarClock,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 
 const frequencyLabels = {
@@ -61,11 +65,13 @@ function computeNextDueDate(task, completionDate) {
 export function MaintenanceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [completionNotes, setCompletionNotes] = useState("");
+  const [createdRecordId, setCreatedRecordId] = useState(null);
 
   useEffect(() => {
     fetchTask();
@@ -98,10 +104,46 @@ export function MaintenanceDetailPage() {
     }
   };
 
+  async function createServiceRecord(task, notes) {
+    const today = new Date().toISOString().split("T")[0];
+
+    const descriptionParts = [];
+    if (task.task_name) descriptionParts.push(task.task_name);
+    if (task.description) descriptionParts.push(task.description);
+
+    const notesParts = [];
+    if (notes) notesParts.push(notes);
+    if (task.instructions) notesParts.push(`Instructions: ${task.instructions}`);
+
+    const payload = {
+      user_id: user.id,
+      asset_id: task.asset_id || null,
+      property_id: task.property_id || null,
+      contractor_id: task.contractor_id || null,
+      maintenance_task_id: task.id,
+      service_date: today,
+      service_type: "Preventative Maintenance",
+      description: descriptionParts.join(" — ") || task.task_name,
+      total_cost: task.estimated_cost ? parseFloat(task.estimated_cost) : null,
+      notes: notesParts.join("\n\n") || null,
+    };
+
+    const { data, error } = await supabase
+      .from("service_records")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   const handleComplete = async () => {
     const today = new Date().toISOString().split("T")[0];
 
     try {
+      const record = await createServiceRecord(task, completionNotes);
+
       if (task.is_recurring) {
         const nextDue = computeNextDueDate(task, today);
         await supabase
@@ -124,6 +166,8 @@ export function MaintenanceDetailPage() {
           })
           .eq("id", id);
       }
+
+      setCreatedRecordId(record.id);
       setShowCompleteDialog(false);
       setCompletionNotes("");
       fetchTask();
@@ -163,6 +207,26 @@ export function MaintenanceDetailPage() {
 
   return (
     <div className="space-y-6">
+      {createdRecordId && (
+        <div className="flex items-center justify-between rounded-md border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900 dark:bg-green-950">
+          <div className="flex items-center gap-2">
+            <FileText className="size-4 text-green-600" />
+            <p className="text-sm text-green-800 dark:text-green-200">
+              Service record created successfully.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-green-700 hover:text-green-900 dark:text-green-300"
+            onClick={() => navigate(`/service-records/${createdRecordId}`)}
+          >
+            View Record
+            <ExternalLink className="size-3" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -196,7 +260,7 @@ export function MaintenanceDetailPage() {
               )}
             </div>
             <p className="text-muted-foreground">
-              Due {new Date(task.next_due_date).toLocaleDateString()}
+              Due {formatDate(task.next_due_date)}
             </p>
           </div>
         </div>
@@ -235,7 +299,7 @@ export function MaintenanceDetailPage() {
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Due Date</p>
             <p className="text-lg font-semibold">
-              {new Date(task.next_due_date).toLocaleDateString()}
+              {formatDate(task.next_due_date)}
             </p>
           </CardContent>
         </Card>
@@ -314,9 +378,7 @@ export function MaintenanceDetailPage() {
                     Last Completed
                   </dt>
                   <dd className="text-sm">
-                    {new Date(
-                      task.last_completed_date
-                    ).toLocaleDateString()}
+                    {formatDate(task.last_completed_date)}
                   </dd>
                 </div>
               )}
@@ -369,7 +431,7 @@ export function MaintenanceDetailPage() {
                         Next Due After Completion
                       </dt>
                       <dd className="text-sm font-medium">
-                        {new Date(nextDuePreview).toLocaleDateString()}
+                        {formatDate(nextDuePreview)}
                       </dd>
                     </div>
                   )}
@@ -437,7 +499,7 @@ export function MaintenanceDetailPage() {
                   next due date will be automatically set to{" "}
                   <strong>
                     {nextDuePreview
-                      ? new Date(nextDuePreview).toLocaleDateString()
+                      ? formatDate(nextDuePreview)
                       : ""}
                   </strong>
                   {task.recurrence_mode === "fixed"
@@ -445,8 +507,9 @@ export function MaintenanceDetailPage() {
                     : " (based on today's completion date)."}
                 </>
               ) : (
-                "Mark this task as complete. You can optionally add notes about what was done."
-              )}
+                "Mark this task as complete."
+              )}{" "}
+              A service record will be created automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

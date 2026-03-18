@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import supabase from "@/utils/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -555,7 +556,7 @@ export function MaintenanceFormPage() {
                 <div className="rounded-md bg-muted/50 p-3">
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium">Preview:</span> First due{" "}
-                    {new Date(form.next_due_date).toLocaleDateString()}, then
+                    {formatDate(form.next_due_date)}, then
                     repeating{" "}
                     {form.frequency === "custom"
                       ? `every ${form.custom_interval_days || "?"} days`

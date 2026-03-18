@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import supabase from "@/utils/supabase";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -254,7 +255,7 @@ export function AssetDetailPage() {
                 [
                   "Install Date",
                   asset.install_date
-                    ? new Date(asset.install_date).toLocaleDateString()
+                    ? formatDate(asset.install_date)
                     : null,
                 ],
                 [
@@ -295,17 +296,13 @@ export function AssetDetailPage() {
                 [
                   "Parts Warranty",
                   asset.parts_warranty_expiration
-                    ? new Date(
-                        asset.parts_warranty_expiration
-                      ).toLocaleDateString()
+                    ? formatDate(asset.parts_warranty_expiration)
                     : null,
                 ],
                 [
                   "Labor Warranty",
                   asset.labor_warranty_expiration
-                    ? new Date(
-                        asset.labor_warranty_expiration
-                      ).toLocaleDateString()
+                    ? formatDate(asset.labor_warranty_expiration)
                     : null,
                 ],
               ]
@@ -382,9 +379,7 @@ export function AssetDetailPage() {
                           }
                         >
                           <TableCell>
-                            {new Date(
-                              record.service_date
-                            ).toLocaleDateString()}
+                            {formatDate(record.service_date)}
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
@@ -461,9 +456,7 @@ export function AssetDetailPage() {
                               {task.task_name}
                             </TableCell>
                             <TableCell>
-                              {new Date(
-                                task.next_due_date
-                              ).toLocaleDateString()}
+                              {formatDate(task.next_due_date)}
                             </TableCell>
                             <TableCell>
                               <Badge

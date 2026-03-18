@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import supabase from "@/utils/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatDate } from "@/utils/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,7 @@ import { Plus, Search, CalendarClock, CheckCircle2, Repeat } from "lucide-react"
 
 export function MaintenancePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -68,6 +71,18 @@ export function MaintenancePage() {
     const today = new Date().toISOString().split("T")[0];
 
     try {
+      await supabase.from("service_records").insert({
+        user_id: user.id,
+        asset_id: task.asset_id || null,
+        property_id: task.property_id || null,
+        contractor_id: task.contractor_id || null,
+        maintenance_task_id: task.id,
+        service_date: today,
+        service_type: "Preventative Maintenance",
+        description: task.task_name,
+        total_cost: task.estimated_cost ? parseFloat(task.estimated_cost) : null,
+      });
+
       if (task.is_recurring) {
         const baseDate =
           task.recurrence_mode === "from_completion"
@@ -232,9 +247,7 @@ export function MaintenancePage() {
                         </p>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm">
-                        {new Date(
-                          task.next_due_date
-                        ).toLocaleDateString()}
+                        {formatDate(task.next_due_date)}
                       </TableCell>
                       <TableCell>
                         <Badge

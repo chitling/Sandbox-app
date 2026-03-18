@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import supabase from "@/utils/supabase";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -274,9 +275,7 @@ export function ContractorDetailPage() {
                     Insurance Expires
                   </dt>
                   <dd className="text-sm font-medium">
-                    {new Date(
-                      contractor.insurance_expiration
-                    ).toLocaleDateString()}
+                    {formatDate(contractor.insurance_expiration)}
                   </dd>
                 </div>
               )}
@@ -318,9 +317,7 @@ export function ContractorDetailPage() {
                       }
                     >
                       <TableCell className="whitespace-nowrap">
-                        {new Date(
-                          record.service_date
-                        ).toLocaleDateString()}
+                        {formatDate(record.service_date)}
                       </TableCell>
                       <TableCell>
                         {record.assets?.custom_name || "Unknown"}

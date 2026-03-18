@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import supabase from "@/utils/supabase";
+import { formatDate } from "@/utils/dates";
 import {
   Card,
   CardContent,
@@ -150,7 +151,7 @@ export function PropertiesPage() {
                         {property.assets?.[0]?.count ?? 0}
                       </TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">
-                        {new Date(property.created_at).toLocaleDateString()}
+                        {formatDate(property.created_at)}
                       </TableCell>
                     </TableRow>
                   ))}
