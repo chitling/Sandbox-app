@@ -1,4 +1,4 @@
-import { useLocation } from "react-router";
+import { useLocation, Link } from "react-router";
 import {
   SidebarProvider,
   SidebarInset,
@@ -77,9 +77,9 @@ export function Layout({ children }) {
                   <span className="text-muted-foreground">/</span>
                 )}
                 {crumb.href ? (
-                  <span className="text-muted-foreground hover:text-foreground cursor-default">
+                  <Link to={crumb.href} className="text-muted-foreground hover:text-foreground">
                     {crumb.label}
-                  </span>
+                  </Link>
                 ) : (
                   <span className="font-medium">{crumb.label}</span>
                 )}
