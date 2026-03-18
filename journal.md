@@ -1,6 +1,11 @@
 Next:
-- Maintenance tasks should move to service history after completion.
+- Maintenance task creation should have option select type of task 
 - In all forms, have option to create new from drop down boxes
+
+3/18/26:
+- Fixed local time bug
+- Completing maintenance tasks now creates a new service record
+- Links in top breadcrumbs navigation bar now works
 
 3/17/26
 - Added option to make maintenance tasks re-occuring.

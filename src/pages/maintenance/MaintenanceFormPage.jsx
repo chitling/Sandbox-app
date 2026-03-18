@@ -24,6 +24,13 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Repeat, CalendarClock } from "lucide-react";
 
+const serviceTypes = [
+  "Preventative Maintenance",
+  "Repair",
+  "Replacement",
+  "Inspection",
+];
+
 const frequencies = [
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly (every 3 months)" },
@@ -55,6 +62,7 @@ export function MaintenanceFormPage() {
     task_name: "",
     description: "",
     instructions: "",
+    service_type: "Preventative Maintenance",
     asset_id: preselectedAssetId || "",
     property_id: "",
     contractor_id: "",
@@ -108,6 +116,7 @@ export function MaintenanceFormPage() {
         task_name: data.task_name || "",
         description: data.description || "",
         instructions: data.instructions || "",
+        service_type: data.service_type || "Preventative Maintenance",
         asset_id: data.asset_id || "",
         property_id: data.property_id || "",
         contractor_id: data.contractor_id || "",
@@ -154,6 +163,7 @@ export function MaintenanceFormPage() {
         task_name: form.task_name,
         description: form.description || null,
         instructions: form.instructions || null,
+        service_type: form.service_type,
         asset_id: linkType === "asset" ? form.asset_id || null : null,
         property_id:
           linkType === "property" ? form.property_id || null : null,
@@ -237,17 +247,39 @@ export function MaintenanceFormPage() {
             <CardDescription>What needs to be done?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="task_name">
-                Task Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="task_name"
-                placeholder='e.g., "HVAC filter change", "Water heater flush"'
-                value={form.task_name}
-                onChange={(e) => handleChange("task_name", e.target.value)}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="task_name">
+                  Task Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="task_name"
+                  placeholder='e.g., "HVAC filter change"'
+                  value={form.task_name}
+                  onChange={(e) => handleChange("task_name", e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  Service Type <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={form.service_type}
+                  onValueChange={(v) => handleChange("service_type", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">

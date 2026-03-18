@@ -5,7 +5,7 @@
 -- foreign keys, indexes, and Row Level Security (RLS) policies
 -- =====================================================
 --
--- VERSION: 1.3.0
+-- VERSION: 1.4.0
 -- DATE:    2026-02-17
 --
 -- VERSIONING SYSTEM:
@@ -16,6 +16,9 @@
 --
 -- CHANGELOG:
 -- ─────────────────────────────────────────────────────
+-- v1.4.0  (2026-02-17)  Add service_type to maintenance_tasks
+--   - Added service_type TEXT column (default 'Preventative Maintenance')
+--
 -- v1.3.0  (2026-02-17)  Link service records to maintenance tasks
 --   - Made asset_id nullable on service_records (property-level tasks)
 --   - Added property_id UUID FK to service_records
@@ -904,6 +907,7 @@ CREATE TABLE maintenance_tasks (
   task_name TEXT NOT NULL,
   description TEXT,
   instructions TEXT,
+  service_type TEXT DEFAULT 'Preventative Maintenance', -- matches service_records types
   
   -- Scheduling
   is_recurring BOOLEAN DEFAULT FALSE,

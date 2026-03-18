@@ -78,7 +78,7 @@ export function MaintenancePage() {
         contractor_id: task.contractor_id || null,
         maintenance_task_id: task.id,
         service_date: today,
-        service_type: "Preventative Maintenance",
+        service_type: task.service_type || "Preventative Maintenance",
         description: task.task_name,
         total_cost: task.estimated_cost ? parseFloat(task.estimated_cost) : null,
       });

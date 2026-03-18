@@ -122,7 +122,7 @@ export function MaintenanceDetailPage() {
       contractor_id: task.contractor_id || null,
       maintenance_task_id: task.id,
       service_date: today,
-      service_type: "Preventative Maintenance",
+      service_type: task.service_type || "Preventative Maintenance",
       description: descriptionParts.join(" — ") || task.task_name,
       total_cost: task.estimated_cost ? parseFloat(task.estimated_cost) : null,
       notes: notesParts.join("\n\n") || null,
@@ -252,6 +252,9 @@ export function MaintenanceDetailPage() {
               >
                 {displayStatus}
               </Badge>
+              {task.service_type && (
+                <Badge variant="secondary">{task.service_type}</Badge>
+              )}
               {task.is_recurring && (
                 <Badge variant="outline" className="gap-1">
                   <Repeat className="size-3" />
