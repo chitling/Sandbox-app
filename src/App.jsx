@@ -3,6 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Layout } from "@/components/layout";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { PropertiesPage } from "@/pages/properties/PropertiesPage";
 import { PropertyFormPage } from "@/pages/properties/PropertyFormPage";
@@ -80,6 +82,15 @@ function App() {
           </PublicRoute>
         }
       />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        }
+      />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Protected routes with layout */}
       <Route

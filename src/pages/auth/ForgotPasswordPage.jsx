@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Wrench } from "lucide-react";
 
-export function LoginPage() {
+export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [success, setSuccess] = useState(false);
+  const { resetPassword } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -27,14 +27,41 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      navigate("/");
+      await resetPassword(email);
+      setSuccess(true);
     } catch (err) {
-      setError(err.message || "Failed to sign in");
+      setError(err.message || "Failed to send reset email");
     } finally {
       setLoading(false);
     }
   };
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl">Check your email</CardTitle>
+              <CardDescription>
+                If an account exists for <strong>{email}</strong>, we&apos;ve
+                sent a link to reset your password. Please check your inbox.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => navigate("/login")}
+              >
+                Back to Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -49,9 +76,10 @@ export function LoginPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Welcome back</CardTitle>
+            <CardTitle className="text-xl">Forgot your password?</CardTitle>
             <CardDescription>
-              Sign in to your account to continue
+              Enter your email and we&apos;ll send you a link to reset your
+              password
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -72,36 +100,17 @@ export function LoginPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? "Sending..." : "Send Reset Link"}
               </Button>
             </form>
             <div className="mt-4 text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
+              Remember your password?{" "}
               <Link
-                to="/register"
+                to="/login"
                 className="font-medium text-primary hover:underline"
               >
-                Sign up
+                Sign in
               </Link>
             </div>
           </CardContent>

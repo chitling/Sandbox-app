@@ -6,6 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable, yearFilterFn } from "@/components/ui/data-table";
 import { Plus, Search, Wrench } from "lucide-react";
 
@@ -21,6 +28,7 @@ export function ServiceRecordsPage() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("all");
 
   useEffect(() => {
     fetchRecords();
@@ -43,6 +51,25 @@ export function ServiceRecordsPage() {
       setLoading(false);
     }
   }
+
+  const propertyAddresses = useMemo(() => {
+    const addrs = new Set();
+    for (const r of records) {
+      const addr =
+        r.assets?.properties?.address || r.properties?.address;
+      if (addr) addrs.add(addr);
+    }
+    return Array.from(addrs).sort();
+  }, [records]);
+
+  const filteredByProperty = useMemo(() => {
+    if (propertyFilter === "all") return records;
+    return records.filter((r) => {
+      const addr =
+        r.assets?.properties?.address || r.properties?.address;
+      return addr === propertyFilter;
+    });
+  }, [records, propertyFilter]);
 
   const columns = useMemo(
     () => [
@@ -106,6 +133,8 @@ export function ServiceRecordsPage() {
         cell: ({ getValue }) => (
           <span className="block max-w-48 truncate">{getValue()}</span>
         ),
+        enableSorting: false,
+        enableColumnFilter: false,
       },
       {
         accessorFn: (row) => row.contractors?.company_name || "",
@@ -156,8 +185,8 @@ export function ServiceRecordsPage() {
 
       <Card>
         <CardContent className="p-4">
-          <div className="mb-4">
-            <div className="relative">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search records..."
@@ -166,6 +195,19 @@ export function ServiceRecordsPage() {
                 onChange={(e) => setGlobalFilter(e.target.value)}
               />
             </div>
+            <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="All Properties" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Properties</SelectItem>
+                {propertyAddresses.map((addr) => (
+                  <SelectItem key={addr} value={addr}>
+                    {addr}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {loading ? (
@@ -175,7 +217,7 @@ export function ServiceRecordsPage() {
           ) : (
             <DataTable
               columns={columns}
-              data={records}
+              data={filteredByProperty}
               globalFilter={globalFilter}
               onGlobalFilterChange={setGlobalFilter}
               onRowClick={(record) =>

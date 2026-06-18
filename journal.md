@@ -6,6 +6,8 @@ Next:
 - Completing maintenance tasks now creates a new service record
 - Links in top breadcrumbs navigation bar now works
 - Added "service type" to maintenance tasks
+- Fixed failure to query asset name in Service Records table
+- Added DataTable component (TanStack Table) to enable column filters to Service Records Table
 
 3/17/26
 - Added option to make maintenance tasks re-occuring.

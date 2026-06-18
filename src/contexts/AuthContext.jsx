@@ -50,6 +50,18 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   };
 
+  const resetPassword = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}reset-password`,
+    });
+    if (error) throw error;
+  };
+
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  };
+
   const value = {
     user,
     session,
@@ -57,6 +69,8 @@ export function AuthProvider({ children }) {
     signUp,
     signIn,
     signOut,
+    resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
