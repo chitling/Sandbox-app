@@ -20,6 +20,7 @@ const pageTitles = {
   "/contractors": "Contractors",
   "/contractors/new": "Add Contractor",
   "/profile": "Profile",
+  "/settings": "Settings",
 };
 
 function getPageTitle(pathname) {

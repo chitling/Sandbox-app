@@ -62,6 +62,13 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   };
 
+  const updateProfile = async (updates) => {
+    const { data, error } = await supabase.auth.updateUser({ data: updates });
+    if (error) throw error;
+    setUser(data.user);
+    return data.user;
+  };
+
   const value = {
     user,
     session,
@@ -71,6 +78,7 @@ export function AuthProvider({ children }) {
     signOut,
     resetPassword,
     updatePassword,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

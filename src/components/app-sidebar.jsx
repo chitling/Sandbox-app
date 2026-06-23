@@ -8,6 +8,7 @@ import {
   HardHat,
   LogOut,
   User,
+  Settings,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -171,6 +172,10 @@ export function AppSidebar() {
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <User className="mr-2 size-4" />
                   Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
+                  <Settings className="mr-2 size-4" />
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 size-4" />

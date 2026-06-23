@@ -21,6 +21,8 @@ import { MaintenanceDetailPage } from "@/pages/maintenance/MaintenanceDetailPage
 import { ContractorsPage } from "@/pages/contractors/ContractorsPage";
 import { ContractorFormPage } from "@/pages/contractors/ContractorFormPage";
 import { ContractorDetailPage } from "@/pages/contractors/ContractorDetailPage";
+import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { ProfilePage } from "@/pages/profile/ProfilePage";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -131,6 +133,10 @@ function App() {
                 <Route path="contractors/new" element={<ContractorFormPage />} />
                 <Route path="contractors/:id" element={<ContractorDetailPage />} />
                 <Route path="contractors/:id/edit" element={<ContractorFormPage />} />
+
+                {/* Account */}
+                <Route path="profile" element={<ProfilePage />} />
+                <Route path="settings" element={<SettingsPage />} />
 
                 {/* Catch-all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
